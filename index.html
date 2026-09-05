@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Bingo Musical</title>
   <style>
-    /* ===== ESTILOS (igual que antes) ===== */
+    /* ===== ESTILOS ===== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -162,8 +162,18 @@
       margin: 8px 0;
     }
     .copy-btn { background: #5c6bc0; color: white; border: none; border-radius: 20px; padding: 4px 16px; font-size: 0.8rem; cursor: pointer; }
-    .qr-container { display: flex; justify-content: center; margin: 12px 0; }
-    .qr-container canvas { max-width: 100%; height: auto; border-radius: 8px; }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
+    }
+    .qr-container canvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      width: 150px;  /* Tamaño fijo pero responsive */
+      height: 150px;
+    }
 
     .song-list {
       max-height: 200px;
@@ -213,6 +223,7 @@
       h1 { font-size: 1.6rem; }
       .btn { padding: 8px 14px; font-size: 0.9rem; }
       .btn-font { padding: 4px 12px; font-size: 1.1rem; min-width: 38px; }
+      .qr-container canvas { width: 130px; height: 130px; }
     }
     @media (max-width: 400px) {
       .font-size-1 .cell { font-size: 0.4rem; }
@@ -360,6 +371,36 @@
       "Starships"
     ];
 
+    // ================================================================
+    // CODIFICACIÓN UTF-8 SEGURA PARA BASE64
+    // ================================================================
+    function utf8ToBase64(str) {
+      try {
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+          return String.fromCharCode('0x' + p1);
+        }));
+      } catch (e) {
+        console.error("Error codificando a Base64:", e);
+        // Fallback seguro
+        return btoa(unescape(encodeURIComponent(str)));
+      }
+    }
+
+    function base64ToUtf8(str) {
+      try {
+        return decodeURIComponent(atob(str).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+      } catch (e) {
+        console.error("Error decodificando Base64:", e);
+        // Fallback
+        return JSON.parse(decodeURIComponent(escape(atob(str))));
+      }
+    }
+
+    // ================================================================
+    // VARIABLES GLOBALES
+    // ================================================================
     let canciones = [];
     let cartonActual = [];
     let marked = new Set();
@@ -400,7 +441,8 @@
       if (encoded) {
         gmToggleWrapper.classList.add('hidden');
         try {
-          const decoded = atob(decodeURIComponent(encoded));
+          // Decodificar correctamente UTF-8 desde Base64
+          const decoded = base64ToUtf8(decodeURIComponent(encoded));
           const lista = JSON.parse(decoded);
           if (Array.isArray(lista) && lista.length >= dimension * dimension) {
             canciones = lista;
@@ -409,7 +451,10 @@
             aplicarTamañoFuente();
             return;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.warn("Error al cargar canciones desde URL:", e);
+        }
+        // Si falla, usar canciones por defecto
         canciones = DEFAULT_SONGS;
         generarCarton();
         actualizarUI();
@@ -651,19 +696,21 @@
         return;
       }
       const json = JSON.stringify(canciones);
-      const encoded = btoa(unescape(encodeURIComponent(json)));
+      // Usamos la codificación segura UTF-8
+      const encoded = utf8ToBase64(json);
       const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
       shareLink.textContent = url;
       linkContainer.classList.remove('hidden');
 
       qrContainer.innerHTML = '';
+      // QR más pequeño y con corrección L (más escaneable)
       new QRCode(qrContainer, {
         text: url,
-        width: 180,
-        height: 180,
+        width: 150,
+        height: 150,
         colorDark: '#000000',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.L  // Bajo = más pequeño y rápido de escanear
       });
     }
 
