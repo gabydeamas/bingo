@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Bingo Musical</title>
   <style>
-    /* ===== ESTILOS ===== */
+    /* ===== ESTILOS (igual que antes pero con QR ajustado) ===== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -171,8 +171,9 @@
       max-width: 100%;
       height: auto;
       border-radius: 8px;
-      width: 150px;  /* Tamaño fijo pero responsive */
+      width: 150px;
       height: 150px;
+      image-rendering: pixelated; /* Para mantener nitidez */
     }
 
     .song-list {
@@ -381,7 +382,6 @@
         }));
       } catch (e) {
         console.error("Error codificando a Base64:", e);
-        // Fallback seguro
         return btoa(unescape(encodeURIComponent(str)));
       }
     }
@@ -393,7 +393,6 @@
         }).join(''));
       } catch (e) {
         console.error("Error decodificando Base64:", e);
-        // Fallback
         return JSON.parse(decodeURIComponent(escape(atob(str))));
       }
     }
@@ -441,7 +440,6 @@
       if (encoded) {
         gmToggleWrapper.classList.add('hidden');
         try {
-          // Decodificar correctamente UTF-8 desde Base64
           const decoded = base64ToUtf8(decodeURIComponent(encoded));
           const lista = JSON.parse(decoded);
           if (Array.isArray(lista) && lista.length >= dimension * dimension) {
@@ -454,7 +452,6 @@
         } catch (e) {
           console.warn("Error al cargar canciones desde URL:", e);
         }
-        // Si falla, usar canciones por defecto
         canciones = DEFAULT_SONGS;
         generarCarton();
         actualizarUI();
@@ -467,22 +464,17 @@
       let isCustom = localStorage.getItem('bingo_is_custom') === 'true';
 
       if (isCustom) {
-        // Si el usuario cargó su propia lista, la respetamos
         try {
           canciones = JSON.parse(savedSongs);
-          if (!Array.isArray(canciones) || canciones.length === 0) {
-            throw new Error('Lista inválida');
-          }
+          if (!Array.isArray(canciones) || canciones.length === 0) throw new Error('Lista inválida');
         } catch (e) {
           canciones = DEFAULT_SONGS;
           localStorage.removeItem('bingo_is_custom');
         }
       } else {
-        // Si no es personalizada, comparar con DEFAULT
         if (savedSongs) {
           try {
             const parsed = JSON.parse(savedSongs);
-            // Si la lista guardada es diferente a DEFAULT, actualizar
             if (JSON.stringify(parsed) !== JSON.stringify(DEFAULT_SONGS)) {
               console.log('🔄 Actualizando lista de canciones a la nueva versión.');
               canciones = DEFAULT_SONGS;
@@ -687,7 +679,7 @@
     }
 
     // ================================================================
-    // GM: GENERAR ENLACE Y QR
+    // GM: GENERAR ENLACE Y QR (SOLO CON LAS CANCIONES NECESARIAS)
     // ================================================================
     function generarEnlace() {
       const needed = dimension * dimension;
@@ -695,22 +687,26 @@
         alert(`Necesitas al menos ${needed} canciones para un cartón de ${dimension}x${dimension}.`);
         return;
       }
-      const json = JSON.stringify(canciones);
-      // Usamos la codificación segura UTF-8
+
+      // Seleccionar aleatoriamente 'needed' canciones
+      const shuffled = [...canciones].sort(() => Math.random() - 0.5);
+      const seleccion = shuffled.slice(0, needed);
+
+      const json = JSON.stringify(seleccion);
       const encoded = utf8ToBase64(json);
       const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
       shareLink.textContent = url;
       linkContainer.classList.remove('hidden');
 
+      // QR más nítido: generamos a 300x300 y mostramos a 150x150
       qrContainer.innerHTML = '';
-      // QR más pequeño y con corrección L (más escaneable)
       new QRCode(qrContainer, {
         text: url,
-        width: 150,
-        height: 150,
+        width: 300,
+        height: 300,
         colorDark: '#000000',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.L  // Bajo = más pequeño y rápido de escanear
+        correctLevel: QRCode.CorrectLevel.L  // Bajo = más pequeño
       });
     }
 
