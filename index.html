@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Bingo Musical</title>
   <style>
-    /* ===== ESTILOS (igual que antes pero con QR ajustado) ===== */
+    /* ===== ESTILOS ===== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -173,7 +173,7 @@
       border-radius: 8px;
       width: 150px;
       height: 150px;
-      image-rendering: pixelated; /* Para mantener nitidez */
+      image-rendering: pixelated;
     }
 
     .song-list {
@@ -311,69 +311,26 @@
     const DEFAULT_DIMENSION = 3;
     const DEFAULT_FONT_SIZE = 5;
     const DEFAULT_SONGS = [
-      "drop dead",
-      "Libre",
-      "All Too Well",
-      "What Do You Mean?",
-      "La Morocha",
-      "Empire State Of Mind",
-      "La casa por el tejado",
-      "I Wanna Dance with Somebody",
-      "TiK ToK",
-      "Toxic",
-      "Beauty And A Beat",
-      "Baby",
-      "Story of My Life",
-      "Golden",
-      "The Lazy Song",
-      "El Efecto",
-      "Fiebre",
-      "Callaita",
-      "Sexo Virtual",
-      "Una Vaina Loca",
-      "Feliz Cumpleaños Ferxxo",
-      "Tití Me Preguntó",
-      "Felices los 4",
-      "Me Rehúso",
-      "Borro Cassette",
-      "Quiero Repetir",
-      "Traicionera",
-      "Clavaito",
-      "PORFA",
-      "Rara Vez",
-      "Holanda",
-      "Ready or Not",
-      "Party In The U.S.A.",
-      "My Boo",
-      "I Wanna Love You",
-      "No One",
-      "Shake It Off",
-      "BESO",
-      "La Perla",
-      "El Merengue",
-      "Días de verano",
-      "Princesas",
-      "Soldadito marinero",
-      "Caminando por la vida",
-      "Como Camarón",
-      "Puedes Contar Conmigo",
-      "Por la boca vive el pez",
-      "Limón y Sal",
-      "La Camisa Negra",
-      "La flaca",
-      "La Tortura",
-      "Dynamite",
-      "Replay",
-      "Whistle",
-      "I Gotta Feeling",
-      "On The Floor",
-      "Timber",
-      "Sexy And I Know It",
-      "Starships"
+      "drop dead", "Libre", "All Too Well", "What Do You Mean?",
+      "La Morocha", "Empire State Of Mind", "La casa por el tejado",
+      "I Wanna Dance with Somebody", "TiK ToK", "Toxic",
+      "Beauty And A Beat", "Baby", "Story of My Life", "Golden",
+      "The Lazy Song", "El Efecto", "Fiebre", "Callaita",
+      "Sexo Virtual", "Una Vaina Loca", "Feliz Cumpleaños Ferxxo",
+      "Tití Me Preguntó", "Felices los 4", "Me Rehúso", "Borro Cassette",
+      "Quiero Repetir", "Traicionera", "Clavaito", "PORFA", "Rara Vez",
+      "Holanda", "Ready or Not", "Party In The U.S.A.", "My Boo",
+      "I Wanna Love You", "No One", "Shake It Off", "BESO",
+      "La Perla", "El Merengue", "Días de verano", "Princesas",
+      "Soldadito marinero", "Caminando por la vida", "Como Camarón",
+      "Puedes Contar Conmigo", "Por la boca vive el pez", "Limón y Sal",
+      "La Camisa Negra", "La flaca", "La Tortura", "Dynamite",
+      "Replay", "Whistle", "I Gotta Feeling", "On The Floor",
+      "Timber", "Sexy And I Know It", "Starships"
     ];
 
     // ================================================================
-    // CODIFICACIÓN UTF-8 SEGURA PARA BASE64
+    // UTILIDADES
     // ================================================================
     function utf8ToBase64(str) {
       try {
@@ -381,7 +338,6 @@
           return String.fromCharCode('0x' + p1);
         }));
       } catch (e) {
-        console.error("Error codificando a Base64:", e);
         return btoa(unescape(encodeURIComponent(str)));
       }
     }
@@ -392,9 +348,17 @@
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
       } catch (e) {
-        console.error("Error decodificando Base64:", e);
         return JSON.parse(decodeURIComponent(escape(atob(str))));
       }
+    }
+
+    // Generador de números pseudoaleatorios con semilla
+    function seededRandom(seed) {
+      let s = seed;
+      return function() {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+      };
     }
 
     // ================================================================
@@ -406,6 +370,8 @@
     let dimension = DEFAULT_DIMENSION;
     let playerId = null;
     let fontSize = DEFAULT_FONT_SIZE;
+    let seed = null;
+    let isPlayerMode = false;
 
     // Elementos DOM
     const cartonContainer = document.getElementById('cartonContainer');
@@ -430,89 +396,32 @@
     const fontSizeLabel = document.getElementById('fontSizeLabel');
 
     // ================================================================
-    // INICIALIZACIÓN
+    // FUNCIONES PRINCIPALES
     // ================================================================
-    function init() {
-      playerId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-
-      const params = new URLSearchParams(window.location.search);
-      const encoded = params.get('songs');
-      if (encoded) {
-        gmToggleWrapper.classList.add('hidden');
-        try {
-          const decoded = base64ToUtf8(decodeURIComponent(encoded));
-          const lista = JSON.parse(decoded);
-          if (Array.isArray(lista) && lista.length >= dimension * dimension) {
-            canciones = lista;
-            generarCarton();
-            actualizarUI();
-            aplicarTamañoFuente();
-            return;
-          }
-        } catch (e) {
-          console.warn("Error al cargar canciones desde URL:", e);
-        }
-        canciones = DEFAULT_SONGS;
-        generarCarton();
-        actualizarUI();
-        aplicarTamañoFuente();
-        return;
-      }
-
-      // === ACTUALIZACIÓN AUTOMÁTICA DE LA LISTA ===
-      let savedSongs = localStorage.getItem('bingo_songs');
-      let isCustom = localStorage.getItem('bingo_is_custom') === 'true';
-
-      if (isCustom) {
-        try {
-          canciones = JSON.parse(savedSongs);
-          if (!Array.isArray(canciones) || canciones.length === 0) throw new Error('Lista inválida');
-        } catch (e) {
-          canciones = DEFAULT_SONGS;
-          localStorage.removeItem('bingo_is_custom');
-        }
-      } else {
-        if (savedSongs) {
-          try {
-            const parsed = JSON.parse(savedSongs);
-            if (JSON.stringify(parsed) !== JSON.stringify(DEFAULT_SONGS)) {
-              console.log('🔄 Actualizando lista de canciones a la nueva versión.');
-              canciones = DEFAULT_SONGS;
-              localStorage.setItem('bingo_songs', JSON.stringify(canciones));
-            } else {
-              canciones = parsed;
-            }
-          } catch (e) {
-            canciones = DEFAULT_SONGS;
-            localStorage.setItem('bingo_songs', JSON.stringify(canciones));
-          }
-        } else {
-          canciones = DEFAULT_SONGS;
-          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
-        }
-      }
-
-      generarCarton();
-      actualizarUI();
-      poblarListaGm();
-      aplicarTamañoFuente();
-    }
-
-    // ================================================================
-    // LÓGICA DEL CARTÓN
-    // ================================================================
-    function generarCarton() {
+    function generarCartonDesdeLista(lista, semilla) {
       const needed = dimension * dimension;
-      if (canciones.length < needed) {
-        alert(`⚠️ Necesitas al menos ${needed} canciones. Tienes ${canciones.length}.`);
-        return;
+      if (lista.length < needed) {
+        alert(`⚠️ Necesitas al menos ${needed} canciones. Tienes ${lista.length}.`);
+        return null;
       }
-      const shuffled = [...canciones].sort(() => Math.random() - 0.5);
+
+      // Usar la semilla para seleccionar canciones de forma determinista
+      const rng = seededRandom(semilla);
+      // Mezclar la lista con la semilla
+      const shuffled = [...lista];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
       const seleccion = shuffled.slice(0, needed);
+
+      // Barajar de nuevo con otra semilla (para que el orden sea diferente por jugador)
+      const playerRng = seededRandom(semilla + parseInt(playerId || '0', 36));
       for (let i = seleccion.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(playerRng() * (i + 1));
         [seleccion[i], seleccion[j]] = [seleccion[j], seleccion[i]];
       }
+
       const carton = [];
       let idx = 0;
       for (let i = 0; i < dimension; i++) {
@@ -522,29 +431,242 @@
         }
         carton.push(fila);
       }
-      cartonActual = carton;
-      marked = new Set();
-      guardarEstado();
-      actualizarUI();
-      aplicarTamañoFuente();
+      return carton;
     }
 
-    function toggleMark(fila, col) {
-      const idx = fila * dimension + col;
-      if (marked.has(idx)) marked.delete(idx);
-      else marked.add(idx);
-      actualizarUI();
-      guardarEstado();
-    }
-
-    function resetCarton() {
-      marked = new Set();
-      actualizarUI();
-      guardarEstado();
+    function generarCarton() {
+      if (isPlayerMode) {
+        // Modo jugador: usar la semilla y la lista global
+        const carton = generarCartonDesdeLista(canciones, seed);
+        if (carton) {
+          cartonActual = carton;
+          marked = new Set();
+          guardarEstado();
+          actualizarUI();
+          aplicarTamañoFuente();
+        }
+      } else {
+        // Modo GM: generar aleatoriamente sin semilla (para previsualizar)
+        const needed = dimension * dimension;
+        if (canciones.length < needed) {
+          alert(`⚠️ Necesitas al menos ${needed} canciones. Tienes ${canciones.length}.`);
+          return;
+        }
+        const shuffled = [...canciones].sort(() => Math.random() - 0.5);
+        const seleccion = shuffled.slice(0, needed);
+        for (let i = seleccion.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [seleccion[i], seleccion[j]] = [seleccion[j], seleccion[i]];
+        }
+        const carton = [];
+        let idx = 0;
+        for (let i = 0; i < dimension; i++) {
+          const fila = [];
+          for (let j = 0; j < dimension; j++) {
+            fila.push(seleccion[idx++]);
+          }
+          carton.push(fila);
+        }
+        cartonActual = carton;
+        marked = new Set();
+        guardarEstado();
+        actualizarUI();
+        aplicarTamañoFuente();
+      }
     }
 
     // ================================================================
-    // RENDERIZADO
+    // INICIALIZACIÓN
+    // ================================================================
+    async function init() {
+      playerId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+
+      const params = new URLSearchParams(window.location.search);
+      const seedParam = params.get('seed');
+
+      if (seedParam) {
+        // Modo jugador
+        isPlayerMode = true;
+        seed = parseInt(seedParam);
+        gmToggleWrapper.classList.add('hidden');
+
+        // Cargar canciones desde canciones.json
+        try {
+          const resp = await fetch('canciones.json');
+          if (!resp.ok) throw new Error('No se pudo cargar canciones.json');
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0) {
+            canciones = data;
+          } else {
+            throw new Error('canciones.json vacío o inválido');
+          }
+        } catch (e) {
+          console.warn('Error al cargar canciones.json, usando DEFAULT_SONGS:', e);
+          canciones = DEFAULT_SONGS;
+        }
+
+        generarCarton();
+        actualizarUI();
+        aplicarTamañoFuente();
+        return;
+      }
+
+      // Modo GM
+      isPlayerMode = false;
+      // Resto del código GM (cargar lista guardada o usar DEFAULT)
+      const saved = localStorage.getItem('bingo_songs');
+      const isCustom = localStorage.getItem('bingo_is_custom') === 'true';
+      if (isCustom && saved) {
+        try {
+          canciones = JSON.parse(saved);
+          if (!Array.isArray(canciones) || canciones.length === 0) throw new Error('Lista inválida');
+        } catch (e) {
+          canciones = DEFAULT_SONGS;
+          localStorage.removeItem('bingo_is_custom');
+        }
+      } else if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (JSON.stringify(parsed) !== JSON.stringify(DEFAULT_SONGS)) {
+            canciones = DEFAULT_SONGS;
+            localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          } else {
+            canciones = parsed;
+          }
+        } catch (e) {
+          canciones = DEFAULT_SONGS;
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+        }
+      } else {
+        canciones = DEFAULT_SONGS;
+        localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+      }
+
+      generarCarton();
+      actualizarUI();
+      poblarListaGm();
+      aplicarTamañoFuente();
+    }
+
+    // ================================================================
+    // EVENTOS
+    // ================================================================
+    resetBtn.addEventListener('click', () => {
+      marked = new Set();
+      actualizarUI();
+      guardarEstado();
+    });
+
+    newCartonBtn.addEventListener('click', generarCarton);
+
+    fontIncBtn.addEventListener('click', () => {
+      if (fontSize < 12) { fontSize++; aplicarTamañoFuente(); }
+    });
+    fontDecBtn.addEventListener('click', () => {
+      if (fontSize > 1) { fontSize--; aplicarTamañoFuente(); }
+    });
+
+    toggleGmBtn.addEventListener('click', () => {
+      gmPanel.classList.toggle('hidden');
+      toggleGmBtn.textContent = gmPanel.classList.contains('hidden') ? '🎛️ Panel de Game Master' : '🎛️ Ocultar panel';
+    });
+
+    fileUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            canciones = parsed;
+            generarCarton();
+            actualizarUI();
+            poblarListaGm();
+            localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+            localStorage.setItem('bingo_is_custom', 'true');
+            alert('✅ Canciones cargadas desde archivo.');
+          } else {
+            alert('❌ El archivo no contiene un array de canciones válido.');
+          }
+        } catch (e) {
+          alert('❌ Error al leer el archivo. Asegúrate de que sea un JSON válido.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    loadSongsBtn.addEventListener('click', () => {
+      const texto = songTextArea.value;
+      if (!texto) {
+        alert('Pega las canciones primero.');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(texto);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          canciones = parsed;
+          generarCarton();
+          actualizarUI();
+          poblarListaGm();
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          localStorage.setItem('bingo_is_custom', 'true');
+          alert('✅ Canciones cargadas.');
+          songTextArea.value = '';
+        } else {
+          alert('❌ No es un array de canciones válido.');
+        }
+      } catch (e) {
+        const lineas = texto.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+        if (lineas.length > 0) {
+          canciones = lineas;
+          generarCarton();
+          actualizarUI();
+          poblarListaGm();
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          localStorage.setItem('bingo_is_custom', 'true');
+          alert('✅ Canciones cargadas.');
+          songTextArea.value = '';
+        } else {
+          alert('❌ No se pudieron cargar las canciones.');
+        }
+      }
+    });
+
+    generateLinkBtn.addEventListener('click', () => {
+      const needed = dimension * dimension;
+      if (canciones.length < needed) {
+        alert(`Necesitas al menos ${needed} canciones para un cartón de ${dimension}x${dimension}.`);
+        return;
+      }
+
+      // Generar semilla aleatoria de 6 dígitos
+      const newSeed = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+      const url = window.location.origin + window.location.pathname + '?seed=' + newSeed;
+      shareLink.textContent = url;
+      linkContainer.classList.remove('hidden');
+
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: url,
+        width: 300,
+        height: 300,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.L
+      });
+    });
+
+    copyLinkBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(shareLink.textContent).then(() => {
+        alert('Enlace copiado al portapapeles.');
+      }).catch(() => {
+        alert('No se pudo copiar. Copia manualmente.');
+      });
+    });
+
+    // ================================================================
+    // FUNCIONES DE RENDERIZADO Y PERSISTENCIA
     // ================================================================
     function actualizarUI() {
       if (!cartonActual || cartonActual.length === 0) return;
@@ -561,7 +683,12 @@
           const isMarked = marked.has(idx);
           cell.textContent = valor;
           if (isMarked) cell.classList.add('marked');
-          cell.addEventListener('click', () => toggleMark(i, j));
+          cell.addEventListener('click', () => {
+            if (marked.has(idx)) marked.delete(idx);
+            else marked.add(idx);
+            actualizarUI();
+            guardarEstado();
+          });
           cartonContainer.appendChild(cell);
           total++;
         }
@@ -570,9 +697,6 @@
       totalCells.textContent = total;
     }
 
-    // ================================================================
-    // CONTROL DE TAMAÑO DE FUENTE
-    // ================================================================
     function aplicarTamañoFuente() {
       const classes = cartonContainer.className.split(' ').filter(c => !c.startsWith('font-size-'));
       cartonContainer.className = classes.join(' ') + ` font-size-${fontSize}`;
@@ -580,16 +704,6 @@
       localStorage.setItem('bingo_font_size', fontSize);
     }
 
-    function aumentarFuente() {
-      if (fontSize < 12) { fontSize++; aplicarTamañoFuente(); }
-    }
-    function disminuirFuente() {
-      if (fontSize > 1) { fontSize--; aplicarTamañoFuente(); }
-    }
-
-    // ================================================================
-    // PERSISTENCIA
-    // ================================================================
     function guardarEstado() {
       try {
         localStorage.setItem('bingo_carton', JSON.stringify({
@@ -598,7 +712,9 @@
           marked: [...marked],
           playerId
         }));
-        localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+        if (!isPlayerMode) {
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+        }
       } catch (e) {}
     }
 
@@ -621,9 +737,6 @@
       } catch (e) { return false; }
     }
 
-    // ================================================================
-    // LISTA DE CANCIONES (GM)
-    // ================================================================
     function poblarListaGm() {
       songListContainer.innerHTML = '';
       if (!canciones || canciones.length === 0) {
@@ -649,123 +762,11 @@
     }
 
     // ================================================================
-    // GM: CARGAR CANCIONES
-    // ================================================================
-    function cargarCancionesDesdeTexto(texto) {
-      try {
-        const parsed = JSON.parse(texto);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          canciones = parsed;
-          generarCarton();
-          actualizarUI();
-          poblarListaGm();
-          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
-          localStorage.setItem('bingo_is_custom', 'true');
-          return true;
-        }
-      } catch (e) {
-        const lineas = texto.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-        if (lineas.length > 0) {
-          canciones = lineas;
-          generarCarton();
-          actualizarUI();
-          poblarListaGm();
-          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
-          localStorage.setItem('bingo_is_custom', 'true');
-          return true;
-        }
-      }
-      return false;
-    }
-
-    // ================================================================
-    // GM: GENERAR ENLACE Y QR (SOLO CON LAS CANCIONES NECESARIAS)
-    // ================================================================
-    function generarEnlace() {
-      const needed = dimension * dimension;
-      if (canciones.length < needed) {
-        alert(`Necesitas al menos ${needed} canciones para un cartón de ${dimension}x${dimension}.`);
-        return;
-      }
-
-      // Seleccionar aleatoriamente 'needed' canciones
-      const shuffled = [...canciones].sort(() => Math.random() - 0.5);
-      const seleccion = shuffled.slice(0, needed);
-
-      const json = JSON.stringify(seleccion);
-      const encoded = utf8ToBase64(json);
-      const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
-      shareLink.textContent = url;
-      linkContainer.classList.remove('hidden');
-
-      // QR más nítido: generamos a 300x300 y mostramos a 150x150
-      qrContainer.innerHTML = '';
-      new QRCode(qrContainer, {
-        text: url,
-        width: 300,
-        height: 300,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.L  // Bajo = más pequeño
-      });
-    }
-
-    // ================================================================
-    // EVENTOS
-    // ================================================================
-    resetBtn.addEventListener('click', resetCarton);
-    newCartonBtn.addEventListener('click', generarCarton);
-    fontIncBtn.addEventListener('click', aumentarFuente);
-    fontDecBtn.addEventListener('click', disminuirFuente);
-
-    toggleGmBtn.addEventListener('click', () => {
-      gmPanel.classList.toggle('hidden');
-      toggleGmBtn.textContent = gmPanel.classList.contains('hidden') ? '🎛️ Panel de Game Master' : '🎛️ Ocultar panel';
-    });
-
-    fileUpload.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (cargarCancionesDesdeTexto(ev.target.result)) {
-          alert('✅ Canciones cargadas desde archivo.');
-        } else {
-          alert('❌ No se pudo cargar el archivo. Asegúrate de que sea un JSON con array de strings o texto con una canción por línea.');
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    loadSongsBtn.addEventListener('click', () => {
-      const texto = songTextArea.value;
-      if (!texto) {
-        alert('Pega las canciones primero.');
-        return;
-      }
-      if (cargarCancionesDesdeTexto(texto)) {
-        alert('✅ Canciones cargadas.');
-        songTextArea.value = '';
-      } else {
-        alert('❌ No se pudieron cargar. Asegúrate de que sea un JSON con array de strings o texto con una canción por línea.');
-      }
-    });
-
-    generateLinkBtn.addEventListener('click', generarEnlace);
-
-    copyLinkBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(shareLink.textContent).then(() => {
-        alert('Enlace copiado al portapapeles.');
-      }).catch(() => {
-        alert('No se pudo copiar. Copia manualmente.');
-      });
-    });
-
-    // ================================================================
     // INICIO
     // ================================================================
+    // Intentar cargar estado guardado (solo en modo GM)
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('songs')) {
+    if (!params.has('seed')) {
       const estadoCargado = cargarEstado();
       if (estadoCargado && cartonActual && cartonActual.length) {
         const savedSongs = localStorage.getItem('bingo_songs');
