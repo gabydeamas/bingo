@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Bingo Musical</title>
   <style>
-    /* ===== ESTILOS ===== */
+    /* ===== ESTILOS (igual que antes) ===== */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -60,7 +60,6 @@
     .btn-font { background: #5c6bc0; padding: 6px 14px; font-size: 1.2rem; font-weight: bold; min-width: 44px; }
     .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; }
 
-    /* Cartón */
     .carton-wrapper { margin: 10px 0; display: flex; flex-direction: column; align-items: center; }
     .carton-grid {
       display: grid;
@@ -89,7 +88,6 @@
       user-select: none;
       transition: all 0.1s;
       line-height: 1.2;
-      /* El tamaño de fuente se controla desde JS con la clase .font-size-X */
     }
     .cell:active { transform: scale(0.92); }
     .cell.marked {
@@ -107,7 +105,6 @@
       color: rgba(255,255,255,0.6);
     }
 
-    /* Tamaños de fuente (controlados por JS) */
     .font-size-1 .cell { font-size: 0.5rem; }
     .font-size-2 .cell { font-size: 0.6rem; }
     .font-size-3 .cell { font-size: 0.7rem; }
@@ -135,7 +132,6 @@
       margin-left: 8px;
     }
 
-    /* Panel GM (oculto por defecto) */
     .gm-section {
       background: #e8eaf6;
       border-radius: 20px;
@@ -239,14 +235,12 @@
     <h1><span>🎵</span> Bingo Musical</h1>
     <div class="subtitle">Toca una casilla para marcarla</div>
 
-    <!-- Modo Jugador (siempre visible) -->
     <div id="playerMode">
       <div class="btn-group">
         <button class="btn" id="resetBtn">🔄 Reiniciar</button>
         <button class="btn btn-secondary" id="newCartonBtn">🎲 Nuevo cartón</button>
       </div>
 
-      <!-- Controles de tamaño de fuente -->
       <div class="font-controls">
         <button class="btn btn-font" id="fontDecBtn">A−</button>
         <span id="fontSizeLabel">Tamaño: 5</span>
@@ -261,12 +255,10 @@
       </div>
     </div>
 
-    <!-- Botón GM (solo visible si NO hay parámetro 'songs' en la URL) -->
     <div id="gmToggleWrapper">
       <button class="btn btn-outline" id="toggleGmBtn">🎛️ Panel de Game Master</button>
     </div>
 
-    <!-- Panel GM (oculto por defecto) -->
     <div id="gmPanel" class="gm-section hidden">
       <h3>🎛️ Game Master</h3>
       <p style="font-size:0.9rem; margin-bottom:6px;">
@@ -299,10 +291,8 @@
     </div>
   </div>
 
-  <!-- Librería QR (ligera) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script>
-    
     // ================================================================
     // CONFIGURACIÓN
     // ================================================================
@@ -427,22 +417,44 @@
         return;
       }
 
-      const saved = localStorage.getItem('bingo_songs');
-      if (saved) {
+      // === ACTUALIZACIÓN AUTOMÁTICA DE LA LISTA ===
+      let savedSongs = localStorage.getItem('bingo_songs');
+      let isCustom = localStorage.getItem('bingo_is_custom') === 'true';
+
+      if (isCustom) {
+        // Si el usuario cargó su propia lista, la respetamos
         try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            canciones = parsed;
-            generarCarton();
-            actualizarUI();
-            poblarListaGm();
-            aplicarTamañoFuente();
-            return;
+          canciones = JSON.parse(savedSongs);
+          if (!Array.isArray(canciones) || canciones.length === 0) {
+            throw new Error('Lista inválida');
           }
-        } catch (e) {}
+        } catch (e) {
+          canciones = DEFAULT_SONGS;
+          localStorage.removeItem('bingo_is_custom');
+        }
+      } else {
+        // Si no es personalizada, comparar con DEFAULT
+        if (savedSongs) {
+          try {
+            const parsed = JSON.parse(savedSongs);
+            // Si la lista guardada es diferente a DEFAULT, actualizar
+            if (JSON.stringify(parsed) !== JSON.stringify(DEFAULT_SONGS)) {
+              console.log('🔄 Actualizando lista de canciones a la nueva versión.');
+              canciones = DEFAULT_SONGS;
+              localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+            } else {
+              canciones = parsed;
+            }
+          } catch (e) {
+            canciones = DEFAULT_SONGS;
+            localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          }
+        } else {
+          canciones = DEFAULT_SONGS;
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+        }
       }
 
-      canciones = DEFAULT_SONGS;
       generarCarton();
       actualizarUI();
       poblarListaGm();
@@ -525,26 +537,17 @@
     // CONTROL DE TAMAÑO DE FUENTE
     // ================================================================
     function aplicarTamañoFuente() {
-      // Eliminar todas las clases font-size-* del contenedor
       const classes = cartonContainer.className.split(' ').filter(c => !c.startsWith('font-size-'));
       cartonContainer.className = classes.join(' ') + ` font-size-${fontSize}`;
       fontSizeLabel.textContent = `Tamaño: ${fontSize}`;
-      // Guardar preferencia
       localStorage.setItem('bingo_font_size', fontSize);
     }
 
     function aumentarFuente() {
-      if (fontSize < 12) {
-        fontSize++;
-        aplicarTamañoFuente();
-      }
+      if (fontSize < 12) { fontSize++; aplicarTamañoFuente(); }
     }
-
     function disminuirFuente() {
-      if (fontSize > 1) {
-        fontSize--;
-        aplicarTamañoFuente();
-      }
+      if (fontSize > 1) { fontSize--; aplicarTamañoFuente(); }
     }
 
     // ================================================================
@@ -572,7 +575,6 @@
         cartonActual = data.carton;
         marked = new Set(data.marked || []);
         playerId = data.playerId || null;
-        // Cargar tamaño de fuente guardado
         const savedFont = localStorage.getItem('bingo_font_size');
         if (savedFont) {
           fontSize = parseInt(savedFont);
@@ -621,6 +623,7 @@
           actualizarUI();
           poblarListaGm();
           localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          localStorage.setItem('bingo_is_custom', 'true');
           return true;
         }
       } catch (e) {
@@ -631,6 +634,7 @@
           actualizarUI();
           poblarListaGm();
           localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          localStorage.setItem('bingo_is_custom', 'true');
           return true;
         }
       }
@@ -668,7 +672,6 @@
     // ================================================================
     resetBtn.addEventListener('click', resetCarton);
     newCartonBtn.addEventListener('click', generarCarton);
-
     fontIncBtn.addEventListener('click', aumentarFuente);
     fontDecBtn.addEventListener('click', disminuirFuente);
 
