@@ -136,7 +136,12 @@
       justify-content: center;
       margin: 12px 0;
     }
-    .qr-container canvas { max-width: 100%; height: auto; border-radius: 12px; }
+    .qr-container canvas { 
+      max-width: 100%; 
+      height: auto; 
+      border-radius: 12px;
+      border: 2px solid #c5cae9;
+    }
     .share-link {
       background: white;
       padding: 10px;
@@ -182,11 +187,11 @@
     @media (max-width: 500px) {
       .container { padding: 16px; }
       h1 { font-size: 1.6rem; }
-      .cell { font-size: 0.65rem; min-height: 32px; }
+      .cell { font-size: 0.7rem; min-height: 32px; }
       .btn { padding: 10px 16px; font-size: 0.9rem; }
     }
     @media (max-width: 400px) {
-      .cell { font-size: 0.55rem; min-height: 28px; }
+      .cell { font-size: 0.6rem; min-height: 28px; }
     }
   </style>
 </head>
@@ -202,10 +207,10 @@
         <button class="btn btn-secondary" id="newCartonBtn">🎲 Nuevo cartón</button>
       </div>
       <div class="carton-wrapper">
-        <div id="cartonContainer" class="carton-grid" style="grid-template-columns: repeat(5, 1fr);"></div>
+        <div id="cartonContainer" class="carton-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
       </div>
       <div class="counter">
-        Marcadas: <span id="markedCount">0</span> / <span id="totalCells">25</span>
+        Marcadas: <span id="markedCount">0</span> / <span id="totalCells">9</span>
       </div>
     </div>
 
@@ -254,19 +259,15 @@
     const DEFAULT_SONGS = [
       "Bohemian Rhapsody", "Imagine", "Hey Jude", "Like a Rolling Stone",
       "Smells Like Teen Spirit", "Hotel California", "Stairway to Heaven",
-      "Wonderwall", "Comfortably Numb", "Wish You Were Here",
-      "The Sound of Silence", "Fade to Black", "Nothing Else Matters",
-      "Enter Sandman", "One", "Master of Puppets", "Sweet Child O' Mine",
-      "November Rain", "Paradise City", "Welcome to the Jungle",
-      "Back in Black", "Highway to Hell", "Thunderstruck", "You Shook Me All Night Long"
+      "Wonderwall", "Comfortably Numb"
     ];
 
     // Variables globales
     let canciones = [];
     let cartonActual = [];
     let marked = new Set();
-    let dimension = 5;
-    let playerId = null;  // identificador único para cada jugador (se genera al abrir)
+    let dimension = 3;  // Cambiado a 3x3 por defecto
+    let playerId = null;
 
     // Elementos DOM
     const cartonContainer = document.getElementById('cartonContainer');
@@ -291,10 +292,8 @@
     // INICIALIZACIÓN
     // ================================================================
     function init() {
-      // Generar ID de jugador (para semilla aleatoria)
       playerId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
       
-      // Intentar cargar canciones de la URL (parámetro ?songs=...)
       const params = new URLSearchParams(window.location.search);
       const encoded = params.get('songs');
       if (encoded) {
@@ -311,7 +310,6 @@
         } catch (e) {}
       }
 
-      // Si no hay parámetro, cargar por defecto o localStorage
       const saved = localStorage.getItem('bingo_songs');
       if (saved) {
         try {
@@ -326,7 +324,6 @@
         } catch (e) {}
       }
 
-      // Fallback: canciones por defecto
       canciones = DEFAULT_SONGS;
       generarCarton();
       actualizarUI();
@@ -342,11 +339,8 @@
         return;
       }
 
-      // Usar el playerId como semilla para aleatoriedad determinista (opcional)
-      // pero usamos Math.random normal para que sea impredecible
       const shuffled = [...canciones].sort(() => Math.random() - 0.5);
       const seleccion = shuffled.slice(0, dimension * dimension);
-      // Barajar de nuevo para que no estén en orden
       for (let i = seleccion.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [seleccion[i], seleccion[j]] = [seleccion[j], seleccion[i]];
@@ -413,7 +407,7 @@
     }
 
     // ================================================================
-    // PERSISTENCIA (localStorage)
+    // PERSISTENCIA
     // ================================================================
     function guardarEstado() {
       try {
@@ -434,7 +428,7 @@
         if (!raw) return false;
         const data = JSON.parse(raw);
         if (!data.carton || !data.carton.length) return false;
-        dimension = data.dimension || 5;
+        dimension = data.dimension || 3;
         cartonActual = data.carton;
         marked = new Set(data.marked || []);
         playerId = data.playerId || null;
@@ -480,7 +474,6 @@
         alert('No se encontraron canciones. Asegúrate de poner una por línea.');
         return false;
       }
-      // Intentar parsear JSON si parece un array
       try {
         const parsed = JSON.parse(texto);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -492,7 +485,6 @@
           return true;
         }
       } catch (e) {
-        // No es JSON, usar como líneas
         canciones = lineas;
         generarCarton();
         actualizarUI();
@@ -511,22 +503,21 @@
         alert(`Necesitas al menos ${dimension*dimension} canciones para un cartón de ${dimension}x${dimension}.`);
         return;
       }
-      // Codificar lista en base64
       const json = JSON.stringify(canciones);
-      const encoded = btoa(unescape(encodeURIComponent(json))); // UTF-8 safe
+      const encoded = btoa(unescape(encodeURIComponent(json)));
       const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
       shareLink.textContent = url;
       linkContainer.classList.remove('hidden');
 
-      // Generar QR
+      // Generar QR más sencillo y pequeño
       qrContainer.innerHTML = '';
       new QRCode(qrContainer, {
         text: url,
-        width: 200,
-        height: 200,
+        width: 150,
+        height: 150,
         colorDark: '#1a237e',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.L  // Menor corrección = más pequeño y rápido
       });
     }
 
@@ -534,17 +525,13 @@
     // EVENTOS
     // ================================================================
     resetBtn.addEventListener('click', resetCarton);
-    newCartonBtn.addEventListener('click', () => {
-      generarCarton();
-    });
+    newCartonBtn.addEventListener('click', generarCarton);
 
-    // Toggle panel GM
     toggleGmBtn.addEventListener('click', () => {
       gmPanel.classList.toggle('hidden');
       toggleGmBtn.textContent = gmPanel.classList.contains('hidden') ? '🎛️ Panel de Game Master' : '🎛️ Ocultar panel';
     });
 
-    // Subir archivo JSON
     fileUpload.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -558,7 +545,6 @@
       reader.readAsText(file);
     });
 
-    // Pegar lista
     pasteBtn.addEventListener('click', async () => {
       try {
         const text = await navigator.clipboard.readText();
@@ -568,7 +554,6 @@
       }
     });
 
-    // Cargar desde textarea
     loadSongsBtn.addEventListener('click', () => {
       const texto = songTextArea.value;
       if (!texto) {
@@ -581,10 +566,8 @@
       }
     });
 
-    // Generar enlace
     generateLinkBtn.addEventListener('click', generarEnlace);
 
-    // Copiar enlace
     copyLinkBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(shareLink.textContent).then(() => {
         alert('Enlace copiado al portapapeles.');
@@ -596,10 +579,8 @@
     // ================================================================
     // INICIO
     // ================================================================
-    // Intentar cargar estado guardado
     const estadoCargado = cargarEstado();
     if (estadoCargado && cartonActual && cartonActual.length) {
-      // Recuperar canciones del localStorage
       const savedSongs = localStorage.getItem('bingo_songs');
       if (savedSongs) {
         try {
