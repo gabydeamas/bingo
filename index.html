@@ -57,6 +57,7 @@
     .btn-secondary { background: #ff7043; }
     .btn-outline { background: transparent; color: #3949ab; border: 2px solid #3949ab; box-shadow: none; }
     .btn-success { background: #2e7d32; }
+    .btn-font { background: #5c6bc0; padding: 6px 14px; font-size: 1.2rem; font-weight: bold; min-width: 44px; }
     .btn-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; }
 
     /* Cartón */
@@ -78,7 +79,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
       font-weight: 600;
       color: #1a237e;
       text-align: center;
@@ -89,6 +89,7 @@
       user-select: none;
       transition: all 0.1s;
       line-height: 1.2;
+      /* El tamaño de fuente se controla desde JS con la clase .font-size-X */
     }
     .cell:active { transform: scale(0.92); }
     .cell.marked {
@@ -105,6 +106,20 @@
       font-size: 1.2rem;
       color: rgba(255,255,255,0.6);
     }
+
+    /* Tamaños de fuente (controlados por JS) */
+    .font-size-1 .cell { font-size: 0.5rem; }
+    .font-size-2 .cell { font-size: 0.6rem; }
+    .font-size-3 .cell { font-size: 0.7rem; }
+    .font-size-4 .cell { font-size: 0.8rem; }
+    .font-size-5 .cell { font-size: 0.9rem; }
+    .font-size-6 .cell { font-size: 1.0rem; }
+    .font-size-7 .cell { font-size: 1.1rem; }
+    .font-size-8 .cell { font-size: 1.2rem; }
+    .font-size-9 .cell { font-size: 1.4rem; }
+    .font-size-10 .cell { font-size: 1.6rem; }
+    .font-size-11 .cell { font-size: 1.8rem; }
+    .font-size-12 .cell { font-size: 2.0rem; }
 
     .counter {
       font-size: 1.1rem;
@@ -183,14 +198,39 @@
     .footer { margin-top: 16px; font-size: 0.8rem; color: #5c6bc0; }
     .hidden { display: none !important; }
 
+    .font-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 8px 0 4px;
+    }
+    .font-controls span {
+      font-size: 0.85rem;
+      color: #1a237e;
+      font-weight: 500;
+      min-width: 70px;
+    }
+
     @media (max-width: 500px) {
       .container { padding: 16px; }
       h1 { font-size: 1.6rem; }
-      .cell { font-size: 0.65rem; min-height: 32px; }
       .btn { padding: 8px 14px; font-size: 0.9rem; }
+      .btn-font { padding: 4px 12px; font-size: 1.1rem; min-width: 38px; }
     }
     @media (max-width: 400px) {
-      .cell { font-size: 0.55rem; min-height: 28px; }
+      .font-size-1 .cell { font-size: 0.4rem; }
+      .font-size-2 .cell { font-size: 0.5rem; }
+      .font-size-3 .cell { font-size: 0.6rem; }
+      .font-size-4 .cell { font-size: 0.7rem; }
+      .font-size-5 .cell { font-size: 0.8rem; }
+      .font-size-6 .cell { font-size: 0.9rem; }
+      .font-size-7 .cell { font-size: 1.0rem; }
+      .font-size-8 .cell { font-size: 1.1rem; }
+      .font-size-9 .cell { font-size: 1.2rem; }
+      .font-size-10 .cell { font-size: 1.3rem; }
+      .font-size-11 .cell { font-size: 1.4rem; }
+      .font-size-12 .cell { font-size: 1.5rem; }
     }
   </style>
 </head>
@@ -205,8 +245,16 @@
         <button class="btn" id="resetBtn">🔄 Reiniciar</button>
         <button class="btn btn-secondary" id="newCartonBtn">🎲 Nuevo cartón</button>
       </div>
+
+      <!-- Controles de tamaño de fuente -->
+      <div class="font-controls">
+        <button class="btn btn-font" id="fontDecBtn">A−</button>
+        <span id="fontSizeLabel">Tamaño: 5</span>
+        <button class="btn btn-font" id="fontIncBtn">A+</button>
+      </div>
+
       <div class="carton-wrapper">
-        <div id="cartonContainer" class="carton-grid" style="grid-template-columns: repeat(3, 1fr);"></div>
+        <div id="cartonContainer" class="carton-grid font-size-5" style="grid-template-columns: repeat(3, 1fr);"></div>
       </div>
       <div class="counter">
         Marcadas: <span id="markedCount">0</span> / <span id="totalCells">9</span>
@@ -257,7 +305,8 @@
     // ================================================================
     // CONFIGURACIÓN
     // ================================================================
-    const DEFAULT_DIMENSION = 3;   // <-- CAMBIADO A 3x3
+    const DEFAULT_DIMENSION = 3;
+    const DEFAULT_FONT_SIZE = 5;   // nivel de fuente inicial (1-12)
     const DEFAULT_SONGS = [
       "Bohemian Rhapsody", "Imagine", "Hey Jude", "Like a Rolling Stone",
       "Smells Like Teen Spirit", "Hotel California", "Stairway to Heaven",
@@ -269,6 +318,7 @@
     let marked = new Set();
     let dimension = DEFAULT_DIMENSION;
     let playerId = null;
+    let fontSize = DEFAULT_FONT_SIZE;
 
     // Elementos DOM
     const cartonContainer = document.getElementById('cartonContainer');
@@ -288,19 +338,19 @@
     const copyLinkBtn = document.getElementById('copyLinkBtn');
     const qrContainer = document.getElementById('qrContainer');
     const songListContainer = document.getElementById('songListContainer');
+    const fontIncBtn = document.getElementById('fontIncBtn');
+    const fontDecBtn = document.getElementById('fontDecBtn');
+    const fontSizeLabel = document.getElementById('fontSizeLabel');
 
     // ================================================================
     // INICIALIZACIÓN
     // ================================================================
     function init() {
-      // Generar ID de jugador (para semilla aleatoria)
       playerId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
-      // Comprobar si la URL tiene parámetro 'songs' (modo jugador)
       const params = new URLSearchParams(window.location.search);
       const encoded = params.get('songs');
       if (encoded) {
-        // Modo jugador: ocultar el botón GM
         gmToggleWrapper.classList.add('hidden');
         try {
           const decoded = atob(decodeURIComponent(encoded));
@@ -309,17 +359,17 @@
             canciones = lista;
             generarCarton();
             actualizarUI();
+            aplicarTamañoFuente();
             return;
           }
         } catch (e) {}
-        // Si falla, usar canciones por defecto
         canciones = DEFAULT_SONGS;
         generarCarton();
         actualizarUI();
+        aplicarTamañoFuente();
         return;
       }
 
-      // Modo GM: intentar cargar estado guardado
       const saved = localStorage.getItem('bingo_songs');
       if (saved) {
         try {
@@ -329,16 +379,17 @@
             generarCarton();
             actualizarUI();
             poblarListaGm();
+            aplicarTamañoFuente();
             return;
           }
         } catch (e) {}
       }
 
-      // Fallback: canciones por defecto
       canciones = DEFAULT_SONGS;
       generarCarton();
       actualizarUI();
       poblarListaGm();
+      aplicarTamañoFuente();
     }
 
     // ================================================================
@@ -350,10 +401,8 @@
         alert(`⚠️ Necesitas al menos ${needed} canciones. Tienes ${canciones.length}.`);
         return;
       }
-      // Mezclar y seleccionar
       const shuffled = [...canciones].sort(() => Math.random() - 0.5);
       const seleccion = shuffled.slice(0, needed);
-      // Barajar de nuevo
       for (let i = seleccion.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [seleccion[i], seleccion[j]] = [seleccion[j], seleccion[i]];
@@ -371,6 +420,7 @@
       marked = new Set();
       guardarEstado();
       actualizarUI();
+      aplicarTamañoFuente();
     }
 
     function toggleMark(fila, col) {
@@ -415,6 +465,32 @@
     }
 
     // ================================================================
+    // CONTROL DE TAMAÑO DE FUENTE
+    // ================================================================
+    function aplicarTamañoFuente() {
+      // Eliminar todas las clases font-size-* del contenedor
+      const classes = cartonContainer.className.split(' ').filter(c => !c.startsWith('font-size-'));
+      cartonContainer.className = classes.join(' ') + ` font-size-${fontSize}`;
+      fontSizeLabel.textContent = `Tamaño: ${fontSize}`;
+      // Guardar preferencia
+      localStorage.setItem('bingo_font_size', fontSize);
+    }
+
+    function aumentarFuente() {
+      if (fontSize < 12) {
+        fontSize++;
+        aplicarTamañoFuente();
+      }
+    }
+
+    function disminuirFuente() {
+      if (fontSize > 1) {
+        fontSize--;
+        aplicarTamañoFuente();
+      }
+    }
+
+    // ================================================================
     // PERSISTENCIA
     // ================================================================
     function guardarEstado() {
@@ -439,6 +515,12 @@
         cartonActual = data.carton;
         marked = new Set(data.marked || []);
         playerId = data.playerId || null;
+        // Cargar tamaño de fuente guardado
+        const savedFont = localStorage.getItem('bingo_font_size');
+        if (savedFont) {
+          fontSize = parseInt(savedFont);
+          if (isNaN(fontSize) || fontSize < 1 || fontSize > 12) fontSize = DEFAULT_FONT_SIZE;
+        }
         return true;
       } catch (e) { return false; }
     }
@@ -474,7 +556,6 @@
     // GM: CARGAR CANCIONES
     // ================================================================
     function cargarCancionesDesdeTexto(texto) {
-      // Intentar parsear JSON
       try {
         const parsed = JSON.parse(texto);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -486,7 +567,6 @@
           return true;
         }
       } catch (e) {
-        // No es JSON, tratar como líneas
         const lineas = texto.split('\n').map(s => s.trim()).filter(s => s.length > 0);
         if (lineas.length > 0) {
           canciones = lineas;
@@ -509,14 +589,12 @@
         alert(`Necesitas al menos ${needed} canciones para un cartón de ${dimension}x${dimension}.`);
         return;
       }
-      // Codificar lista en base64
       const json = JSON.stringify(canciones);
-      const encoded = btoa(unescape(encodeURIComponent(json))); // UTF-8 safe
+      const encoded = btoa(unescape(encodeURIComponent(json)));
       const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
       shareLink.textContent = url;
       linkContainer.classList.remove('hidden');
 
-      // QR más sencillo: sin marco, solo el código
       qrContainer.innerHTML = '';
       new QRCode(qrContainer, {
         text: url,
@@ -534,13 +612,14 @@
     resetBtn.addEventListener('click', resetCarton);
     newCartonBtn.addEventListener('click', generarCarton);
 
-    // Toggle GM
+    fontIncBtn.addEventListener('click', aumentarFuente);
+    fontDecBtn.addEventListener('click', disminuirFuente);
+
     toggleGmBtn.addEventListener('click', () => {
       gmPanel.classList.toggle('hidden');
       toggleGmBtn.textContent = gmPanel.classList.contains('hidden') ? '🎛️ Panel de Game Master' : '🎛️ Ocultar panel';
     });
 
-    // Subir archivo
     fileUpload.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -555,7 +634,6 @@
       reader.readAsText(file);
     });
 
-    // Cargar desde textarea
     loadSongsBtn.addEventListener('click', () => {
       const texto = songTextArea.value;
       if (!texto) {
@@ -570,10 +648,8 @@
       }
     });
 
-    // Generar enlace
     generateLinkBtn.addEventListener('click', generarEnlace);
 
-    // Copiar enlace
     copyLinkBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(shareLink.textContent).then(() => {
         alert('Enlace copiado al portapapeles.');
@@ -585,7 +661,6 @@
     // ================================================================
     // INICIO
     // ================================================================
-    // Intentar cargar estado guardado (solo si no hay parámetro songs)
     const params = new URLSearchParams(window.location.search);
     if (!params.has('songs')) {
       const estadoCargado = cargarEstado();
@@ -597,11 +672,11 @@
         if (!canciones || canciones.length === 0) canciones = DEFAULT_SONGS;
         actualizarUI();
         poblarListaGm();
+        aplicarTamañoFuente();
       } else {
         init();
       }
     } else {
-      // Modo jugador: ya se inició con init()
       init();
     }
   </script>
