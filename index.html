@@ -3,15 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Bingo Musical</title>
+  <title>Bingo Musical - Multijugador</title>
   <style>
-    /* Reset y estilos globales */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    /* === ESTILOS === */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -22,19 +17,606 @@
       padding: 16px;
       margin: 0;
     }
-
     .container {
       max-width: 600px;
       width: 100%;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255,255,255,0.95);
       backdrop-filter: blur(8px);
       border-radius: 30px;
       padding: 24px 20px 30px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
       text-align: center;
       transition: all 0.3s;
     }
+    h1 {
+      font-size: 2rem;
+      color: #1a237e;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .subtitle { color: #3949ab; font-size: 0.95rem; margin-bottom: 16px; }
 
+    .btn {
+      background: #3949ab;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 40px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 4px 8px rgba(57,73,171,0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px;
+    }
+    .btn:active { transform: scale(0.95); }
+    .btn-secondary { background: #ff7043; box-shadow: 0 4px 8px rgba(255,112,67,0.3); }
+    .btn-outline { background: transparent; color: #3949ab; border: 2px solid #3949ab; box-shadow: none; }
+    .btn-success { background: #2e7d32; box-shadow: 0 4px 8px rgba(46,125,50,0.3); }
+    .btn-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 12px 0; }
+
+    /* Cartón */
+    .carton-wrapper { margin: 12px 0; display: flex; flex-direction: column; align-items: center; }
+    .carton-grid {
+      display: grid;
+      gap: 4px;
+      background: #1a237e;
+      padding: 6px;
+      border-radius: 16px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 450px;
+      aspect-ratio: 1 / 1;
+    }
+    .cell {
+      background: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1a237e;
+      text-align: center;
+      padding: 4px;
+      word-break: break-word;
+      transition: all 0.15s;
+      cursor: pointer;
+      user-select: none;
+      border: 2px solid #c5cae9;
+      line-height: 1.2;
+    }
+    .cell.marked {
+      background: #4caf50;
+      color: white;
+      border-color: #2e7d32;
+      position: relative;
+    }
+    .cell.marked::after {
+      content: "✓";
+      position: absolute;
+      top: 2px;
+      right: 6px;
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.7);
+    }
+    .cell:active { transform: scale(0.92); }
+
+    .counter { font-size: 1.1rem; font-weight: 600; color: #1a237e; margin: 8px 0; }
+    .counter span { background: #3949ab; color: white; padding: 2px 14px; border-radius: 30px; margin-left: 8px; }
+
+    /* Sección GM */
+    .gm-section {
+      background: #e8eaf6;
+      border-radius: 20px;
+      padding: 16px;
+      margin: 12px 0;
+      text-align: left;
+    }
+    .gm-section h3 { color: #1a237e; margin-bottom: 10px; font-size: 1.1rem; }
+    .gm-section textarea {
+      width: 100%;
+      height: 120px;
+      border-radius: 12px;
+      border: 2px solid #c5cae9;
+      padding: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .gm-section .file-input { margin: 8px 0; }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      margin: 12px 0;
+    }
+    .qr-container canvas { max-width: 100%; height: auto; border-radius: 12px; }
+    .share-link {
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+      word-break: break-all;
+      font-size: 0.8rem;
+      border: 1px solid #c5cae9;
+      margin: 8px 0;
+    }
+    .copy-btn { background: #5c6bc0; color: white; border: none; border-radius: 20px; padding: 4px 16px; font-size: 0.8rem; cursor: pointer; }
+
+    /* Lista de canciones (GM) */
+    .song-list {
+      max-height: 200px;
+      overflow-y: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 8px;
+      margin-top: 8px;
+    }
+    .song-item {
+      padding: 4px 8px;
+      border-bottom: 1px solid #e8eaf6;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .song-item .mark-btn {
+      background: #e8eaf6;
+      border: none;
+      border-radius: 30px;
+      padding: 2px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    .song-item .mark-btn:active { background: #c5cae9; }
+    .song-item.marked-dj { background: #e8f5e9; text-decoration: line-through; color: #888; }
+
+    .footer { margin-top: 20px; font-size: 0.8rem; color: #5c6bc0; }
+    .hidden { display: none; }
+
+    @media (max-width: 500px) {
+      .container { padding: 16px; }
+      h1 { font-size: 1.6rem; }
+      .cell { font-size: 0.65rem; min-height: 32px; }
+      .btn { padding: 10px 16px; font-size: 0.9rem; }
+    }
+    @media (max-width: 400px) {
+      .cell { font-size: 0.55rem; min-height: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1><span>🎵</span> Bingo Musical</h1>
+    <div class="subtitle">Toca una casilla para marcarla</div>
+
+    <!-- Modo Jugador (por defecto) -->
+    <div id="playerMode">
+      <div class="btn-group">
+        <button class="btn" id="resetBtn">🔄 Reiniciar cartón</button>
+        <button class="btn btn-secondary" id="newCartonBtn">🎲 Nuevo cartón</button>
+      </div>
+      <div class="carton-wrapper">
+        <div id="cartonContainer" class="carton-grid" style="grid-template-columns: repeat(5, 1fr);"></div>
+      </div>
+      <div class="counter">
+        Marcadas: <span id="markedCount">0</span> / <span id="totalCells">25</span>
+      </div>
+    </div>
+
+    <!-- Botón para mostrar/ocultar panel GM -->
+    <button class="btn btn-outline" id="toggleGmBtn">🎛️ Panel de Game Master</button>
+
+    <!-- Panel GM (oculto por defecto) -->
+    <div id="gmPanel" class="gm-section hidden">
+      <h3>🎛️ Game Master</h3>
+      <p style="font-size:0.9rem; margin-bottom:8px;">
+        Sube tu lista de canciones (archivo JSON o pega el texto) y genera un enlace para los jugadores.
+      </p>
+      <div class="file-input">
+        <label for="fileUpload" class="btn btn-outline" style="display:inline-block; padding:6px 16px;">📂 Subir JSON</label>
+        <input type="file" id="fileUpload" accept=".json,application/json" style="display:none;">
+        <button class="btn btn-outline" id="pasteBtn">📋 Pegar lista</button>
+      </div>
+      <div style="margin:8px 0;">
+        <textarea id="songTextArea" placeholder="Pega aquí las canciones (una por línea)"></textarea>
+      </div>
+      <div class="btn-group">
+        <button class="btn" id="loadSongsBtn">📥 Cargar canciones</button>
+        <button class="btn btn-success" id="generateLinkBtn">🔗 Generar enlace</button>
+      </div>
+      <div id="linkContainer" class="hidden">
+        <div class="share-link" id="shareLink">Cargando...</div>
+        <button class="copy-btn" id="copyLinkBtn">Copiar enlace</button>
+        <div class="qr-container" id="qrContainer"></div>
+        <p style="font-size:0.8rem; color:#5c6bc0;">Comparte el enlace o el código QR con los jugadores</p>
+      </div>
+      <hr style="margin:12px 0; border-color:#c5cae9;">
+      <h4>📋 Lista de canciones (marca las que suenan)</h4>
+      <div id="songListContainer" class="song-list"></div>
+    </div>
+
+    <div class="footer">
+      Cada jugador usa su propio cartón · Marca las canciones que suenan
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    // ================================================================
+    // CONFIGURACIÓN
+    // ================================================================
+    const DEFAULT_SONGS = [
+      "Bohemian Rhapsody", "Imagine", "Hey Jude", "Like a Rolling Stone",
+      "Smells Like Teen Spirit", "Hotel California", "Stairway to Heaven",
+      "Wonderwall", "Comfortably Numb", "Wish You Were Here",
+      "The Sound of Silence", "Fade to Black", "Nothing Else Matters",
+      "Enter Sandman", "One", "Master of Puppets", "Sweet Child O' Mine",
+      "November Rain", "Paradise City", "Welcome to the Jungle",
+      "Back in Black", "Highway to Hell", "Thunderstruck", "You Shook Me All Night Long"
+    ];
+
+    // Variables globales
+    let canciones = [];
+    let cartonActual = [];
+    let marked = new Set();
+    let dimension = 5;
+    let playerId = null;  // identificador único para cada jugador (se genera al abrir)
+
+    // Elementos DOM
+    const cartonContainer = document.getElementById('cartonContainer');
+    const markedCount = document.getElementById('markedCount');
+    const totalCells = document.getElementById('totalCells');
+    const resetBtn = document.getElementById('resetBtn');
+    const newCartonBtn = document.getElementById('newCartonBtn');
+    const toggleGmBtn = document.getElementById('toggleGmBtn');
+    const gmPanel = document.getElementById('gmPanel');
+    const fileUpload = document.getElementById('fileUpload');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const songTextArea = document.getElementById('songTextArea');
+    const loadSongsBtn = document.getElementById('loadSongsBtn');
+    const generateLinkBtn = document.getElementById('generateLinkBtn');
+    const linkContainer = document.getElementById('linkContainer');
+    const shareLink = document.getElementById('shareLink');
+    const copyLinkBtn = document.getElementById('copyLinkBtn');
+    const qrContainer = document.getElementById('qrContainer');
+    const songListContainer = document.getElementById('songListContainer');
+
+    // ================================================================
+    // INICIALIZACIÓN
+    // ================================================================
+    function init() {
+      // Generar ID de jugador (para semilla aleatoria)
+      playerId = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      
+      // Intentar cargar canciones de la URL (parámetro ?songs=...)
+      const params = new URLSearchParams(window.location.search);
+      const encoded = params.get('songs');
+      if (encoded) {
+        try {
+          const decoded = atob(decodeURIComponent(encoded));
+          const lista = JSON.parse(decoded);
+          if (Array.isArray(lista) && lista.length > 0) {
+            canciones = lista;
+            generarCarton();
+            actualizarUI();
+            poblarListaGm();
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Si no hay parámetro, cargar por defecto o localStorage
+      const saved = localStorage.getItem('bingo_songs');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            canciones = parsed;
+            generarCarton();
+            actualizarUI();
+            poblarListaGm();
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // Fallback: canciones por defecto
+      canciones = DEFAULT_SONGS;
+      generarCarton();
+      actualizarUI();
+      poblarListaGm();
+    }
+
+    // ================================================================
+    // LÓGICA DEL CARTÓN
+    // ================================================================
+    function generarCarton() {
+      if (canciones.length < dimension * dimension) {
+        alert(`⚠️ Necesitas al menos ${dimension*dimension} canciones. Tienes ${canciones.length}.`);
+        return;
+      }
+
+      // Usar el playerId como semilla para aleatoriedad determinista (opcional)
+      // pero usamos Math.random normal para que sea impredecible
+      const shuffled = [...canciones].sort(() => Math.random() - 0.5);
+      const seleccion = shuffled.slice(0, dimension * dimension);
+      // Barajar de nuevo para que no estén en orden
+      for (let i = seleccion.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [seleccion[i], seleccion[j]] = [seleccion[j], seleccion[i]];
+      }
+
+      const carton = [];
+      let idx = 0;
+      for (let i = 0; i < dimension; i++) {
+        const fila = [];
+        for (let j = 0; j < dimension; j++) {
+          fila.push(seleccion[idx++]);
+        }
+        carton.push(fila);
+      }
+      cartonActual = carton;
+      marked = new Set();
+      guardarEstado();
+      actualizarUI();
+    }
+
+    function toggleMark(fila, col) {
+      const idx = fila * dimension + col;
+      if (marked.has(idx)) {
+        marked.delete(idx);
+      } else {
+        marked.add(idx);
+      }
+      actualizarUI();
+      guardarEstado();
+    }
+
+    function resetCarton() {
+      marked = new Set();
+      actualizarUI();
+      guardarEstado();
+    }
+
+    // ================================================================
+    // RENDERIZADO
+    // ================================================================
+    function actualizarUI() {
+      if (!cartonActual || cartonActual.length === 0) return;
+      const dim = cartonActual.length;
+      cartonContainer.style.gridTemplateColumns = `repeat(${dim}, 1fr)`;
+      cartonContainer.innerHTML = '';
+
+      let total = 0;
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const idx = i * dim + j;
+          const valor = cartonActual[i][j];
+          const isMarked = marked.has(idx);
+          cell.textContent = valor;
+          if (isMarked) cell.classList.add('marked');
+          cell.addEventListener('click', () => toggleMark(i, j));
+          cartonContainer.appendChild(cell);
+          total++;
+        }
+      }
+      markedCount.textContent = marked.size;
+      totalCells.textContent = total;
+    }
+
+    // ================================================================
+    // PERSISTENCIA (localStorage)
+    // ================================================================
+    function guardarEstado() {
+      try {
+        const data = {
+          dimension,
+          carton: cartonActual,
+          marked: [...marked],
+          playerId
+        };
+        localStorage.setItem('bingo_carton', JSON.stringify(data));
+        localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+      } catch (e) {}
+    }
+
+    function cargarEstado() {
+      try {
+        const raw = localStorage.getItem('bingo_carton');
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data.carton || !data.carton.length) return false;
+        dimension = data.dimension || 5;
+        cartonActual = data.carton;
+        marked = new Set(data.marked || []);
+        playerId = data.playerId || null;
+        return true;
+      } catch (e) { return false; }
+    }
+
+    // ================================================================
+    // LISTA DE CANCIONES (GM)
+    // ================================================================
+    function poblarListaGm() {
+      songListContainer.innerHTML = '';
+      if (!canciones || canciones.length === 0) {
+        songListContainer.innerHTML = '<p style="color:#888;">No hay canciones cargadas.</p>';
+        return;
+      }
+      canciones.forEach((cancion, index) => {
+        const item = document.createElement('div');
+        item.className = 'song-item';
+        const span = document.createElement('span');
+        span.textContent = `${index+1}. ${cancion}`;
+        const btn = document.createElement('button');
+        btn.className = 'mark-btn';
+        btn.textContent = 'Marcar';
+        btn.dataset.index = index;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          item.classList.toggle('marked-dj');
+          btn.textContent = item.classList.contains('marked-dj') ? 'Desmarcar' : 'Marcar';
+        });
+        item.appendChild(span);
+        item.appendChild(btn);
+        songListContainer.appendChild(item);
+      });
+    }
+
+    // ================================================================
+    // GM: CARGAR CANCIONES
+    // ================================================================
+    function cargarCancionesDesdeTexto(texto) {
+      const lineas = texto.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      if (lineas.length === 0) {
+        alert('No se encontraron canciones. Asegúrate de poner una por línea.');
+        return false;
+      }
+      // Intentar parsear JSON si parece un array
+      try {
+        const parsed = JSON.parse(texto);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          canciones = parsed;
+          generarCarton();
+          actualizarUI();
+          poblarListaGm();
+          localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+          return true;
+        }
+      } catch (e) {
+        // No es JSON, usar como líneas
+        canciones = lineas;
+        generarCarton();
+        actualizarUI();
+        poblarListaGm();
+        localStorage.setItem('bingo_songs', JSON.stringify(canciones));
+        return true;
+      }
+      return false;
+    }
+
+    // ================================================================
+    // GM: GENERAR ENLACE Y QR
+    // ================================================================
+    function generarEnlace() {
+      if (canciones.length < dimension * dimension) {
+        alert(`Necesitas al menos ${dimension*dimension} canciones para un cartón de ${dimension}x${dimension}.`);
+        return;
+      }
+      // Codificar lista en base64
+      const json = JSON.stringify(canciones);
+      const encoded = btoa(unescape(encodeURIComponent(json))); // UTF-8 safe
+      const url = window.location.origin + window.location.pathname + '?songs=' + encodeURIComponent(encoded);
+      shareLink.textContent = url;
+      linkContainer.classList.remove('hidden');
+
+      // Generar QR
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: url,
+        width: 200,
+        height: 200,
+        colorDark: '#1a237e',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // ================================================================
+    // EVENTOS
+    // ================================================================
+    resetBtn.addEventListener('click', resetCarton);
+    newCartonBtn.addEventListener('click', () => {
+      generarCarton();
+    });
+
+    // Toggle panel GM
+    toggleGmBtn.addEventListener('click', () => {
+      gmPanel.classList.toggle('hidden');
+      toggleGmBtn.textContent = gmPanel.classList.contains('hidden') ? '🎛️ Panel de Game Master' : '🎛️ Ocultar panel';
+    });
+
+    // Subir archivo JSON
+    fileUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const contenido = ev.target.result;
+        if (cargarCancionesDesdeTexto(contenido)) {
+          alert('✅ Canciones cargadas desde archivo.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Pegar lista
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        songTextArea.value = text;
+      } catch (err) {
+        alert('No se pudo pegar desde el portapapeles. Pega manualmente.');
+      }
+    });
+
+    // Cargar desde textarea
+    loadSongsBtn.addEventListener('click', () => {
+      const texto = songTextArea.value;
+      if (!texto) {
+        alert('Pega o escribe las canciones primero.');
+        return;
+      }
+      if (cargarCancionesDesdeTexto(texto)) {
+        alert('✅ Canciones cargadas.');
+        songTextArea.value = '';
+      }
+    });
+
+    // Generar enlace
+    generateLinkBtn.addEventListener('click', generarEnlace);
+
+    // Copiar enlace
+    copyLinkBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(shareLink.textContent).then(() => {
+        alert('Enlace copiado al portapapeles.');
+      }).catch(() => {
+        alert('No se pudo copiar. Copia manualmente.');
+      });
+    });
+
+    // ================================================================
+    // INICIO
+    // ================================================================
+    // Intentar cargar estado guardado
+    const estadoCargado = cargarEstado();
+    if (estadoCargado && cartonActual && cartonActual.length) {
+      // Recuperar canciones del localStorage
+      const savedSongs = localStorage.getItem('bingo_songs');
+      if (savedSongs) {
+        try {
+          canciones = JSON.parse(savedSongs);
+        } catch (e) {}
+      }
+      if (!canciones || canciones.length === 0) {
+        canciones = DEFAULT_SONGS;
+      }
+      actualizarUI();
+      poblarListaGm();
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
     h1 {
       font-size: 2.2rem;
       color: #1a237e;
